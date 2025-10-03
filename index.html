@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+   <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/8242/8242984.png">
+
+  <meta charset="UTF-8" />
+  <title>Convertisseur Excel → CSV (BGB)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --primary:#0ea5e9;        /* bleu clair */
+      --primary-dark:#0284c7;
+      --success:#22c55e;        /* vert */
+      --success-dark:#16a34a;
+      --warning:#f59e0b;
+      --ring:#bae6fd;
+      --shadow:0 10px 25px rgba(0,0,0,.08);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:var(--bg); color:var(--text); line-height:1.45;
+      display:flex; min-height:100vh; flex-direction:column;
+    }
+    .container{
+      width:min(1100px, 92vw); margin:40px auto; padding:24px;
+      background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+    }
+    header{
+      display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+      border-bottom:1px solid #eef2f7; padding-bottom:16px; margin-bottom:20px;
+    }
+    h1{font-size:clamp(20px,3.5vw,28px); margin:0}
+    .actions{display:flex; gap:10px; align-items:center}
+    .btn{
+      display:inline-flex; align-items:center; gap:10px;
+      padding:12px 18px; border:0; border-radius:12px; cursor:pointer;
+      font-weight:700; color:white; transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+      box-shadow:0 8px 18px rgba(2,132,199,.20);
+    }
+    .btn img.icon{width:22px; height:22px; object-fit:contain}
+    .btn:disabled{opacity:.55; cursor:not-allowed; box-shadow:none}
+    .btn-blue{background:var(--primary)}
+    .btn-blue:hover{background:var(--primary-dark); transform:translateY(-1px)}
+    .btn-green{background:var(--success)}
+    .btn-green:hover{background:var(--success-dark); transform:translateY(-1px)}
+    .btn-ghost{
+      background:#eef6ff; color:#0b5cab; box-shadow:none;
+      border:1px solid #dbeafe;
+    }
+    .btn-ghost:hover{background:#e0efff}
+    /* Upload area */
+    .uploader{
+      margin:18px 0 8px; padding:26px; border:2px dashed #c7d2fe; border-radius:18px; background:#f8fafc;
+      position:relative; text-align:center; transition:border-color .25s ease, background .25s ease;
+      overflow:hidden;
+    }
+    .uploader:hover{border-color:#93c5fd; background:#f1f5f9}
+    .uploader.glow{animation:glow 1.8s ease-in-out infinite}
+    @keyframes glow{
+      0%,100%{box-shadow:0 0 0 0 rgba(2,132,199,.25)}
+      50%{box-shadow:0 0 0 12px rgba(2,132,199,.05)}
+    }
+    .uploader.drag{
+      border-color:var(--primary); background:#eaf6ff;
+    }
+    .uploader input[type=file]{display:none}
+    .uploader .label{
+      display:inline-flex; align-items:center; gap:10px; padding:12px 18px; border-radius:12px;
+      background:white; border:1px solid #e5e7eb; cursor:pointer; font-weight:600;
+      transition:transform .18s ease, box-shadow .18s ease;
+      box-shadow:0 8px 18px rgba(0,0,0,.06);
+    }
+    .uploader .label:hover{transform:translateY(-1px)}
+    .uploader .hint{color:var(--muted); margin-top:10px; font-size:14px}
+    .file-name{margin-top:10px; font-weight:600; color:#0b5cab}
+    .badges{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px}
+    .badge{
+      background:#eff6ff; color:#1e40af; border:1px solid #dbeafe; border-radius:999px; padding:5px 10px; font-size:12px; font-weight:700;
+    }
+    /* Spinner + status */
+    #spinner{display:none; margin:16px 0 6px}
+    .spinner{
+      width:44px; height:44px; border-radius:999px; border:5px solid #e5e7eb; border-top-color:var(--primary);
+      animation:spin 1s linear infinite; margin:0 auto 8px;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #status{color:var(--muted); text-align:center; font-size:14px}
+    /* Modal Aide */
+    .modal{
+      position:fixed; inset:0; display:none; place-items:center; background:rgba(15,23,42,.45); padding:18px; z-index:50;
+    }
+    .modal.open{display:grid}
+    .modal-card{
+      background:var(--card); width:min(860px, 94vw); border-radius:18px; box-shadow:var(--shadow); padding:22px;
+      max-height:85vh; overflow:auto;
+    }
+    .modal header{border:0; padding:0; margin:0 0 10px}
+    .modal h2{margin:0; font-size:22px}
+    .steps{margin:10px 0 0; padding-left:18px}
+    .steps li{margin:8px 0}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#f3f4f6; border:1px solid #e5e7eb; padding:2px 6px; border-radius:6px; font-weight:700}
+    footer{
+      margin-top:auto; padding:20px 0; text-align:center; color:#64748b; font-weight:600;
+    }
+    .divider{height:1px; background:#eef2f7; margin:18px 0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Convertisseur Excel → CSV (règles BGB)</h1>
+      <div class="actions">
+        <button class="btn btn-ghost" id="helpBtn" title="Aide / Mode d’emploi">
+          <img class="icon" src="https://www.shutterstock.com/image-vector/support-icon-can-be-used-600nw-1887496465.jpg" alt="Aide"
+               onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%2210%22 fill=%22%230ea5e9%22/%3E%3Ctext x=%2212%22 y=%2216%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22white%22%3F%3E%3F%3C/text%3E%3C/svg%3E';">
+          Aide
+        </button>
+        <button class="btn btn-green" id="btnCsvSemi" disabled>
+          <img class="icon" src="https://cdn-icons-png.flaticon.com/512/8242/8242984.png" alt="CSV ;">
+          Exporter CSV (;)
+        </button>
+        <button class="btn btn-blue" id="btnCsvComma" disabled>
+          <img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/.csv_icon.svg/2048px-.csv_icon.svg.png" alt="CSV ,">
+          Exporter CSV (,)
+        </button>
+      </div>
+    </header>
+
+    <!-- Zone de sélection / drag & drop -->
+    <div id="uploader" class="uploader glow">
+      <label for="inputFile" class="label">
+        📄 Choisir un fichier Excel
+      </label>
+      <input id="inputFile" type="file" accept=".xlsx,.xls,.xlsm" />
+      <div class="hint">Glisse-dépose ton fichier ici ou clique pour le sélectionner (la 1ère feuille sera lue).</div>
+      <div class="badges">
+        <span class="badge">Colonnes A,B,C ajoutées (valeurs fixes)</span>
+        <span class="badge">Colonnes réordonnées/renommées</span>
+        <span class="badge">Export CSV en un clic</span>
+      </div>
+      <div id="fileName" class="file-name" aria-live="polite"></div>
+    </div>
+
+    <div id="spinner" aria-live="polite">
+      <div class="spinner"></div>
+      <div id="status">Conversion en cours…</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <section>
+      <h3 style="margin:6px 0 8px">Ce que fait l’outil (résumé)</h3>
+      <ol class="steps">
+        <li>Lit la <strong>1ère feuille</strong> de ton fichier Excel (dans ton navigateur, rien n’est envoyé).</li>
+        <li>Ajoute 3 colonnes en tête :
+          <span class="kbd">A = code environnement = "BGBHTS3"</span>,
+          <span class="kbd">B = date du stock = date du jour</span>,
+          <span class="kbd">C = code activité = "BGB3"</span>.
+        </li>
+        <li>Construit ensuite les colonnes, dans l’ordre final :
+          <div style="margin-top:6px">
+            <code>CSV.WMS_Ref ← B</code>,
+            <code>CSV.Designation ← C</code>,
+            <code>CSV.Supplier ← H</code>,
+            <code>CSV.ICPE ← R</code>,
+            <code>CSV.Allee ← U</code>,
+            <code>CSV.Cell ← V</code>,
+            <code>CSV.QTY ← I</code>,
+            <code>CSV.QTY_Poids ← Q</code>,
+            <code>CSV.QTY_Vol ← P</code>,
+            <code>CSV.PH_DG ← W</code>,
+            <code>CSV.Etat_PH ← Z</code>,
+            <code>CSV.Risque_P ← AA</code>,
+            <code>CSV.Designation_V ← AB</code>.
+          </div>
+        </li>
+        <li>Exporte le résultat en <strong>CSV</strong> avec séparateur <span class="kbd">;</span> ou <span class="kbd">,</span> au choix.</li>
+      </ol>
+    </section>
+  </div>
+
+  <footer>
+    Kuehne+Nagel — Tous droits réservés — Made by Mohamed Bouzekri
+  </footer>
+
+  <!-- Modal Aide -->
+  <div id="helpModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modal-card">
+      <header style="display:flex;align-items:center;justify-content:space-between">
+        <h2 id="helpTitle">Aide — Mode d’emploi pas à pas</h2>
+        <button class="btn btn-ghost" id="closeHelp">Fermer ✕</button>
+      </header>
+      <ol class="steps">
+        <li>Clique sur <strong>Choisir un fichier Excel</strong> ou dépose-le dans la zone grisée.</li>
+        <li>Une fois chargé, les boutons <strong>Exporter CSV</strong> s’activent.</li>
+        <li>L’outil crée automatiquement en tête :
+          <ul>
+            <li><strong>A</strong> : <em>CSV.Code_Env</em> = <span class="kbd">BGBHTS3</span></li>
+            <li><strong>B</strong> : <em>CSV.Stock_date</em> = aujourd’hui (format AAAAMMJJ)</li>
+            <li><strong>C</strong> : <em>CSV.Code_Act</em> = <span class="kbd">BGB3</span></li>
+          </ul>
+        </li>
+        <li>Pour chaque ligne, il récupère les colonnes d’origine :
+          <ul>
+            <li><strong>B</strong> → CSV.WMS_Ref</li>
+            <li><strong>C</strong> → CSV.Designation</li>
+            <li><strong>H</strong> → CSV.Supplier</li>
+            <li><strong>R</strong> → CSV.ICPE</li>
+            <li><strong>U</strong> → CSV.Allee</li>
+            <li><strong>V</strong> → CSV.Cell</li>
+            <li><strong>I</strong> → CSV.QTY</li>
+            <li><strong>Q</strong> → CSV.QTY_Poids</li>
+            <li><strong>P</strong> → CSV.QTY_Vol</li>
+            <li><strong>W</strong> → CSV.PH_DG</li>
+            <li><strong>Z</strong> → CSV.Etat_PH</li>
+            <li><strong>AA</strong> → CSV.Risque_P</li>
+            <li><strong>AB</strong> → CSV.Designation_V</li>
+          </ul>
+        </li>
+        <li>Choisis le séparateur souhaité : <span class="kbd">;</span> (France/Excel) ou <span class="kbd">,</span> (interop). Le <strong>CSV</strong> se télécharge.</li>
+        <li>Tout se fait <strong>localement</strong> dans ton navigateur — aucune donnée envoyée.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Lib XLSX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    // Utilitaires
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => document.querySelectorAll(sel);
+
+    const uploader = $('#uploader');
+    const inputFile = $('#inputFile');
+    const fileName = $('#fileName');
+    const spinner = $('#spinner');
+    const statusEl = $('#status');
+    const btnCsvSemi = $('#btnCsvSemi');
+    const btnCsvComma = $('#btnCsvComma');
+
+    const helpBtn = $('#helpBtn');
+    const helpModal = $('#helpModal');
+    const closeHelp = $('#closeHelp');
+
+    // Ouverture/fermeture Aide
+    helpBtn.addEventListener('click', ()=> helpModal.classList.add('open'));
+    closeHelp.addEventListener('click', ()=> helpModal.classList.remove('open'));
+    helpModal.addEventListener('click', (e)=>{ if(e.target===helpModal) helpModal.classList.remove('open'); });
+
+    // Drag & drop animations
+    ;['dragenter','dragover'].forEach(evt => {
+      uploader.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); uploader.classList.add('drag'); });
+    });
+    ;['dragleave','drop'].forEach(evt => {
+      uploader.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); uploader.classList.remove('drag'); });
+    });
+    uploader.addEventListener('drop', (e)=>{
+      const f = e.dataTransfer.files?.[0];
+      if(f){ inputFile.files = e.dataTransfer.files; onFileChosen(); }
+    });
+
+    // Choix de fichier
+    inputFile.addEventListener('change', onFileChosen);
+    function onFileChosen(){
+      if(!inputFile.files.length){ return; }
+      const f = inputFile.files[0];
+      fileName.textContent = `Fichier sélectionné : ${f.name}`;
+      btnCsvSemi.disabled = false;
+      btnCsvComma.disabled = false;
+      uploader.classList.remove('glow');
+    }
+
+    // Boutons export
+    btnCsvSemi.addEventListener('click', ()=> exportCSV(';'));
+    btnCsvComma.addEventListener('click', ()=> exportCSV(','));
+
+    // Convertit un tableau JS -> CSV (échappement correct)
+    function toCSV(rows, delimiter){
+      const esc = v => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        return (s.includes('"') || s.includes('\n') || s.includes('\r') || s.includes(delimiter))
+          ? `"${s.replace(/"/g,'""')}"`
+          : s;
+      };
+      return rows.map(r => r.map(esc).join(delimiter)).join('\n');
+    }
+
+    // Lecture + transformation + export
+    function exportCSV(delimiter){
+      const f = inputFile.files[0];
+      if(!f){ alert("Sélectionne d'abord un fichier Excel."); return; }
+
+      spinner.style.display = 'block';
+      statusEl.textContent = 'Lecture du classeur…';
+
+      const reader = new FileReader();
+      reader.onload = function(e){
+        setTimeout(()=>{ // petit délai pour visualiser le spinner
+          try{
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, { type:'array' });
+
+            const ws = wb.Sheets[wb.SheetNames[0]];  // 1ère feuille
+            let table = XLSX.utils.sheet_to_json(ws, { header:1 }); // tableau 2D brut
+            if(!table || table.length === 0){ throw new Error('Feuille vide ou illisible.'); }
+
+            // Construction du résultat
+            const today = new Date().toISOString().slice(0,10).replace(/-/g,''); // AAAAMMJJ
+            const out = [];
+
+            // Entêtes finales
+            out.push([
+              'CSV.Code_Env','CSV.Stock_date','CSV.Code_Act',
+              'CSV.WMS_Ref','CSV.Designation','CSV.Supplier',
+              'CSV.ICPE','CSV.Allee','CSV.Cell','CSV.QTY',
+              'CSV.QTY_Poids','CSV.QTY_Vol','CSV.PH_DG',
+              'CSV.Etat_PH','CSV.Risque_P','CSV.Designation_V'
+            ]);
+
+            statusEl.textContent = 'Transformation des lignes…';
+
+            // Indices colonnes source (A=0)
+            const idx = {
+              B:1, C:2, H:7, R:17, U:20, V:21,
+              I:8, Q:16, P:15, W:22,
+              Z:25, AA:26, AB:27
+            };
+
+            for(let r=1; r<table.length; r++){
+              const row = table[r] || [];
+              const designation = (row[idx.C] ?? '').substring(0,45);
+              if (!designation.trim()) continue; // Skip lignes sans désignation
+              let wmsRef = row[idx.B] ?? '';
+              if (!wmsRef.trim()) {
+                wmsRef = 'CONSOMABLE';
+              }
+              out.push([
+                'BGBHTS3',            // CSV.Code_Env
+                today,                // CSV.Stock_date
+                'BGB3',               // CSV.Code_Act
+                wmsRef,               // CSV.WMS_Ref
+                designation,          // CSV.Designation (tronquée à 45 chars)
+                row[idx.H] ?? '',     // CSV.Supplier
+                row[idx.R] ?? '',     // CSV.ICPE
+                row[idx.U] ?? '',     // CSV.Allee
+                row[idx.V] ?? '',     // CSV.Cell
+                row[idx.I] ?? '',     // CSV.QTY
+                row[idx.Q] ?? '',     // CSV.QTY_Poids
+                row[idx.P] ?? '',     // CSV.QTY_Vol
+                row[idx.W] ?? '',     // CSV.PH_DG
+                row[idx.Z] ?? '',     // CSV.Etat_PH
+                row[idx.AA] ?? '',    // CSV.Risque_P
+                row[idx.AB] ?? ''     // CSV.Designation_V
+              ]);
+            }
+
+            // Supprimer les dernières lignes vides si présentes
+            while (out.length > 1 && out[out.length - 1].every(v => v === '')) {
+              out.pop();
+            }
+
+            statusEl.textContent = `Génération du CSV… (${out.length-1} lignes)`;
+            const csv = toCSV(out, delimiter);
+            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `ESRST_BGBHTS3_${today}001.ESR`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            statusEl.textContent = '✅ Export terminé.';
+
+          }catch(err){
+            console.error(err);
+            alert('Erreur: ' + err.message);
+            statusEl.textContent = 'Erreur pendant la conversion.';
+          }finally{
+            setTimeout(()=>{ spinner.style.display='none'; }, 500);
+          }
+        }, 650);
+      };
+      reader.readAsArrayBuffer(f);
+    }
+  </script>
+</body>
+</html>
