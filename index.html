@@ -49,6 +49,8 @@
     .btn-blue:hover{background:var(--primary-dark); transform:translateY(-1px)}
     .btn-green{background:var(--success)}
     .btn-green:hover{background:var(--success-dark); transform:translateY(-1px)}
+    .btn-purple{background:#8b5cf6}
+    .btn-purple:hover{background:#7c3aed; transform:translateY(-1px)}
     .btn-ghost{
       background:#eef6ff; color:#0b5cab; box-shadow:none;
       border:1px solid #dbeafe;
@@ -129,6 +131,10 @@
           <img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/.csv_icon.svg/2048px-.csv_icon.svg.png" alt="CSV ,">
           Exporter CSV (,)
         </button>
+        <button class="btn btn-purple" id="btnSftp" disabled>
+          <img class="icon" src="https://cdn-icons-png.flaticon.com/512/8242/8242984.png" alt="SFTP">
+          Envoyer sur SFTP
+        </button>
       </div>
     </header>
 
@@ -168,8 +174,8 @@
             <code>CSV.WMS_Ref ← B</code>,
             <code>CSV.Designation ← C</code>,
             <code>CSV.Supplier ← H</code>,
-            <code>CSV.ICPE ← R</code>,
-            <code>CSV.Allee ← U</code>,
+            <code>CSV.ICPE ← T</code>,
+            <code>CSV.Allee ← (vide)</code>,
             <code>CSV.Cell ← V</code>,
             <code>CSV.QTY ← I</code>,
             <code>CSV.QTY_Poids ← Q</code>,
@@ -177,7 +183,7 @@
             <code>CSV.PH_DG ← W</code>,
             <code>CSV.Etat_PH ← Z</code>,
             <code>CSV.Risque_P ← AA</code>,
-            <code>CSV.Designation_V ← AB</code>.
+            <code>CSV.Designation_V ← AD</code>.
           </div>
         </li>
         <li>Exporte le résultat en <strong>CSV</strong> avec séparateur <span class="kbd">;</span> ou <span class="kbd">,</span> au choix.</li>
@@ -211,8 +217,8 @@
             <li><strong>B</strong> → CSV.WMS_Ref</li>
             <li><strong>C</strong> → CSV.Designation</li>
             <li><strong>H</strong> → CSV.Supplier</li>
-            <li><strong>R</strong> → CSV.ICPE</li>
-            <li><strong>U</strong> → CSV.Allee</li>
+            <li><strong>T</strong> → CSV.ICPE</li>
+            <li>CSV.Allee → (vide)</li>
             <li><strong>V</strong> → CSV.Cell</li>
             <li><strong>I</strong> → CSV.QTY</li>
             <li><strong>Q</strong> → CSV.QTY_Poids</li>
@@ -220,7 +226,7 @@
             <li><strong>W</strong> → CSV.PH_DG</li>
             <li><strong>Z</strong> → CSV.Etat_PH</li>
             <li><strong>AA</strong> → CSV.Risque_P</li>
-            <li><strong>AB</strong> → CSV.Designation_V</li>
+            <li><strong>AD</strong> → CSV.Designation_V</li>
           </ul>
         </li>
         <li>Choisis le séparateur souhaité : <span class="kbd">;</span> (France/Excel) ou <span class="kbd">,</span> (interop). Le <strong>CSV</strong> se télécharge.</li>
@@ -243,6 +249,7 @@
     const statusEl = $('#status');
     const btnCsvSemi = $('#btnCsvSemi');
     const btnCsvComma = $('#btnCsvComma');
+    const btnSftp = $('#btnSftp');
 
     const helpBtn = $('#helpBtn');
     const helpModal = $('#helpModal');
@@ -273,18 +280,20 @@
       fileName.textContent = `Fichier sélectionné : ${f.name}`;
       btnCsvSemi.disabled = false;
       btnCsvComma.disabled = false;
+      btnSftp.disabled = false;
       uploader.classList.remove('glow');
     }
 
     // Boutons export
-    btnCsvSemi.addEventListener('click', ()=> exportCSV(';'));
-    btnCsvComma.addEventListener('click', ()=> exportCSV(','));
+    btnCsvSemi.addEventListener('click', ()=> exportCSV(';', false));
+    btnCsvComma.addEventListener('click', ()=> exportCSV(',', false));
+    btnSftp.addEventListener('click', ()=> exportCSV(';', true)); // Envoi SFTP avec ;
 
     // Convertit un tableau JS -> CSV (échappement correct)
     function toCSV(rows, delimiter){
       const esc = v => {
         if (v === null || v === undefined) return '';
-        const s = String(v);
+        const s = String(v).trim();
         return (s.includes('"') || s.includes('\n') || s.includes('\r') || s.includes(delimiter))
           ? `"${s.replace(/"/g,'""')}"`
           : s;
@@ -292,8 +301,48 @@
       return rows.map(r => r.map(esc).join(delimiter)).join('\n');
     }
 
-    // Lecture + transformation + export
-    function exportCSV(delimiter){
+    // Validation des valeurs pour éviter les rejets
+    function cleanValue(value, field) {
+      if (value === null || value === undefined) return '';
+      const str = String(value).trim();
+
+      if (field === 'CSV.Designation_V') {
+        // Nettoyer Désignation vulgarisée
+        if (['LC', '0', 'Hygiene - Beauté', 'SLC'].includes(str) || str === '') {
+          return 'Inconnu';
+        }
+        return str.substring(0, 45); // Limite à 45 caractères
+      }
+
+      if (field === 'CSV.Risque_P') {
+        // Nettoyer Risque particulier
+        if (['0', 'Solide', 'Liquide'].includes(str) || str === '') {
+          return '';
+        }
+        return str;
+      }
+
+      if (field === 'CSV.PH_DG') {
+        // Nettoyer Phrases de dangers (seuls les codes Hxxx sont valides)
+        if (!str.match(/^H\d{3}$/) && str !== '') {
+          return 'Aucune';
+        }
+        return str;
+      }
+
+      if (field === 'CSV.ICPE') {
+        // ICPE : laisser vide si non valide
+        if (['MUJI', 'manque icpe'].includes(str) || str === '') {
+          return '';
+        }
+        return str;
+      }
+
+      return str;
+    }
+
+    // Lecture + transformation + export ou envoi
+    function exportCSV(delimiter, sendToSftp = false){
       const f = inputFile.files[0];
       if(!f){ alert("Sélectionne d'abord un fichier Excel."); return; }
 
@@ -310,6 +359,11 @@
             const ws = wb.Sheets[wb.SheetNames[0]];  // 1ère feuille
             let table = XLSX.utils.sheet_to_json(ws, { header:1 }); // tableau 2D brut
             if(!table || table.length === 0){ throw new Error('Feuille vide ou illisible.'); }
+
+            // Vérifier le nombre de colonnes (au moins 30 pour atteindre AD)
+            if (table[0] && table[0].length < 30) {
+              throw new Error('Le fichier Excel a moins de 30 colonnes. Vérifiez le format du fichier.');
+            }
 
             // Construction du résultat
             const today = new Date().toISOString().slice(0,10).replace(/-/g,''); // AAAAMMJJ
@@ -328,36 +382,36 @@
 
             // Indices colonnes source (A=0)
             const idx = {
-              B:1, C:2, H:7, R:17, U:20, V:21,
+              B:1, C:2, H:7, T:19, V:21,
               I:8, Q:16, P:15, W:22,
-              Z:25, AA:26, AB:27
+              Z:25, AA:26, AD:29
             };
 
             for(let r=1; r<table.length; r++){
               const row = table[r] || [];
-              const designation = (row[idx.C] ?? '').substring(0,45);
-              if (!designation.trim()) continue; // Skip lignes sans désignation
-              let wmsRef = row[idx.B] ?? '';
-              if (!wmsRef.trim()) {
+              const designation = cleanValue(row[idx.C], 'CSV.Designation')?.substring(0,45).trim();
+              if (!designation) continue; // Skip lignes sans désignation
+              let wmsRef = cleanValue(row[idx.B], 'CSV.WMS_Ref')?.trim();
+              if (!wmsRef) {
                 wmsRef = 'CONSOMABLE';
               }
               out.push([
-                'BGBHTS3',            // CSV.Code_Env
-                today,                // CSV.Stock_date
-                'BGB3',               // CSV.Code_Act
-                wmsRef,               // CSV.WMS_Ref
-                designation,          // CSV.Designation (tronquée à 45 chars)
-                row[idx.H] ?? '',     // CSV.Supplier
-                row[idx.R] ?? '',     // CSV.ICPE
-                row[idx.U] ?? '',     // CSV.Allee
-                row[idx.V] ?? '',     // CSV.Cell
-                row[idx.I] ?? '',     // CSV.QTY
-                row[idx.Q] ?? '',     // CSV.QTY_Poids
-                row[idx.P] ?? '',     // CSV.QTY_Vol
-                row[idx.W] ?? '',     // CSV.PH_DG
-                row[idx.Z] ?? '',     // CSV.Etat_PH
-                row[idx.AA] ?? '',    // CSV.Risque_P
-                row[idx.AB] ?? ''     // CSV.Designation_V
+                'BGBHTS3',                        // CSV.Code_Env
+                today,                            // CSV.Stock_date
+                'BGB3',                           // CSV.Code_Act
+                wmsRef,                           // CSV.WMS_Ref
+                designation,                      // CSV.Designation (tronquée à 45 chars, trimmed)
+                cleanValue(row[idx.H], 'CSV.Supplier'),     // CSV.Supplier
+                cleanValue(row[idx.T], 'CSV.ICPE'),         // CSV.ICPE
+                '',                               // CSV.Allee (vide)
+                cleanValue(row[idx.V], 'CSV.Cell'),         // CSV.Cell
+                cleanValue(row[idx.I], 'CSV.QTY'),          // CSV.QTY
+                cleanValue(row[idx.Q], 'CSV.QTY_Poids'),    // CSV.QTY_Poids
+                cleanValue(row[idx.P], 'CSV.QTY_Vol'),      // CSV.QTY_Vol
+                cleanValue(row[idx.W], 'CSV.PH_DG'),        // CSV.PH_DG
+                cleanValue(row[idx.Z], 'CSV.Etat_PH'),      // CSV.Etat_PH
+                cleanValue(row[idx.AA], 'CSV.Risque_P'),    // CSV.Risque_P
+                cleanValue(row[idx.AD], 'CSV.Designation_V') // CSV.Designation_V
               ]);
             }
 
@@ -372,9 +426,13 @@
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = `ESRST_BGBHTS3_${today}001.ESR`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-            statusEl.textContent = '✅ Export terminé.';
+            if (sendToSftp) {
+              uploadToServer(csv, a.download);
+            } else {
+              a.click();
+              URL.revokeObjectURL(a.href);
+              statusEl.textContent = '✅ Export terminé.';
+            }
 
           }catch(err){
             console.error(err);
@@ -386,6 +444,26 @@
         }, 650);
       };
       reader.readAsArrayBuffer(f);
+    }
+
+    // Fonction pour envoyer le CSV au serveur backend
+    async function uploadToServer(csv, filename) {
+      const formData = new FormData();
+      formData.append("file", new Blob([csv], {type:"text/csv"}), filename);
+
+      try {
+        let res = await fetch("http://localhost:5000/upload", {
+          method: "POST",
+          body: formData
+        });
+        let txt = await res.text();
+        statusEl.textContent = '✅ Envoi SFTP terminé.';
+        alert("Serveur : " + txt);
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Erreur lors de l’envoi SFTP.';
+        alert("Erreur lors de l’envoi au serveur : " + err.message);
+      }
     }
   </script>
 </body>
