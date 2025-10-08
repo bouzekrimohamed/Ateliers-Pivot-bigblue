@@ -125,6 +125,11 @@
                onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%2210%22 fill=%22%230ea5e9%22/%3E%3Ctext x=%2212%22 y=%2216%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22white%22%3F%3E%3F%3C/text%3E%3C/svg%3E';">
           Aide
         </button>
+        <button class="btn btn-ghost" id="updateBtn" title="Dernières mises à jour">
+          <img class="icon" src="https://cdn-icons-png.flaticon.com/512/2919/2919592.png" alt="Mises à jour"
+               onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%2210%22 fill=%22%23f59e0b%22/%3E%3Ctext x=%2212%22 y=%2216%22 text-anchor=%22middle%22 font-size=%2214%22 fill=%22white%22%3E!%3C/text%3E%3C/svg%3E';">
+          Mises à jour
+        </button>
         <button class="btn btn-green" id="btnCsvSemi" disabled>
           <img class="icon" src="https://cdn-icons-png.flaticon.com/512/8242/8242984.png" alt="CSV ;">
           Exporter CSV (;)
@@ -237,6 +242,21 @@
     </div>
   </div>
 
+  <!-- Modal Mises à jour -->
+  <div id="updateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="updateTitle">
+    <div class="modal-card">
+      <header style="display:flex;align-items:center;justify-content:space-between">
+        <h2 id="updateTitle">Dernières mises à jour de l’outil</h2>
+        <button class="btn btn-ghost" id="closeUpdate">Fermer ✕</button>
+      </header>
+      <ul class="steps">
+        <li><strong>Version actuelle (08/10/2025) :</strong> Ajout du bouton "Mises à jour" pour afficher les nouveautés. Conservation des virgules dans les phrases de danger (CSV.PH_DG).</li>
+        <li><strong>Précédente mise à jour :</strong> Suppression automatique des ; et , (sauf dans PH_DG), détection de colonnes irrégulières avec blocage et export des erreurs.</li>
+        <li><strong>Anciennes versions :</strong> Nettoyage des valeurs non conformes (Designation_V, Risque_P, PH_DG, ICPE), validation du nombre de colonnes, etc.</li>
+      </ul>
+    </div>
+  </div>
+
   <!-- Lib XLSX -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
@@ -257,10 +277,19 @@
     const helpModal = $('#helpModal');
     const closeHelp = $('#closeHelp');
 
+    const updateBtn = $('#updateBtn');
+    const updateModal = $('#updateModal');
+    const closeUpdate = $('#closeUpdate');
+
     // Ouverture/fermeture Aide
     helpBtn.addEventListener('click', ()=> helpModal.classList.add('open'));
     closeHelp.addEventListener('click', ()=> helpModal.classList.remove('open'));
     helpModal.addEventListener('click', (e)=>{ if(e.target===helpModal) helpModal.classList.remove('open'); });
+
+    // Ouverture/fermeture Mises à jour
+    updateBtn.addEventListener('click', ()=> updateModal.classList.add('open'));
+    closeUpdate.addEventListener('click', ()=> updateModal.classList.remove('open'));
+    updateModal.addEventListener('click', (e)=>{ if(e.target===updateModal) updateModal.classList.remove('open'); });
 
     // Drag & drop animations
     ;['dragenter','dragover'].forEach(evt => {
@@ -303,13 +332,13 @@
       return rows.map(r => r.map(esc).join(delimiter)).join('\n');
     }
 
-    // Validation des valeurs pour éviter les rejets et supprimer ; et ,
+    // Validation des valeurs pour éviter les rejets et supprimer ; (garder , pour éviter décalages)
     function cleanValue(value, field) {
       if (value === null || value === undefined) return '';
       let str = String(value).trim();
 
-      // Supprimer ; et , dans tous les champs
-      str = str.replace(/[;,]/g, ' ');
+      // Supprimer ; dans tous les champs (remplacer par espace)
+      str = str.replace(/;/g, ' ');
 
       if (field === 'CSV.Designation_V') {
         // Nettoyer Désignation vulgarisée
@@ -327,14 +356,6 @@
         return str;
       }
 
-      if (field === 'CSV.PH_DG') {
-        // Nettoyer Phrases de dangers (seuls les codes Hxxx sont valides)
-        if (!str.match(/^H\d{3}$/) && str !== '') {
-          return 'Aucune';
-        }
-        return str;
-      }
-
       if (field === 'CSV.ICPE') {
         // ICPE : laisser vide si non valide
         if (['MUJI', 'manque icpe'].includes(str) || str === '') {
@@ -343,6 +364,7 @@
         return str;
       }
 
+      // Pas de suppression de , (gardées partout pour phrases de danger etc.)
       return str;
     }
 
@@ -379,32 +401,12 @@
             let errorRows = [];
             for (let r = 0; r < table.length; r++) {
               if (table[r].length < maxCols) {
-                errorRows.push({ row: r + 1, cells: table[r].length, expected: maxCols });
+                errorRows.push({ row: r + 1, type: 'irregular_columns', details: `Colonnes présentes: ${table[r].length}, attendues: ${maxCols}` });
               }
             }
 
             if (errorRows.length > 0) {
-              statusEl.textContent = 'Erreur : Colonnes irrégulières détectées (certaines lignes ont des colonnes manquantes). Conversion bloquée.';
-              
-              // Créer bouton pour exporter les erreurs
-              let errBtn = document.createElement('button');
-              errBtn.id = 'errorBtn';
-              errBtn.textContent = 'Exporter les erreurs';
-              errBtn.classList.add('btn', 'btn-warning');
-              spinner.after(errBtn);
-
-              errBtn.addEventListener('click', () => {
-                let errOut = [['Ligne', 'Colonnes présentes', 'Colonnes attendues']];
-                errorRows.forEach(er => errOut.push([er.row, er.cells, er.expected]));
-                let csv = toCSV(errOut, ';');
-                let blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-                let a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'erreurs_colonnes.csv';
-                a.click();
-                URL.revokeObjectURL(a.href);
-              });
-
+              handleErrors(errorRows);
               throw new Error('Colonnes irrégulières dans le fichier.');
             }
 
@@ -430,15 +432,28 @@
               Z:25, AA:26, AD:29
             };
 
+            // Champs requis (vide non autorisé)
+            const requiredIndices = {
+              'CSV.WMS_Ref': 3,
+              'CSV.Designation': 4,
+              'CSV.ICPE': 6,
+              'CSV.Cell': 8,
+              'CSV.QTY': 9,
+              'CSV.QTY_Poids': 10,
+              'CSV.QTY_Vol': 11
+            };
+
             for(let r=1; r<table.length; r++){
               const row = table[r] || [];
               const designation = cleanValue(row[idx.C], 'CSV.Designation')?.substring(0,45).trim();
               if (!designation) continue; // Skip lignes sans désignation
+
               let wmsRef = cleanValue(row[idx.B], 'CSV.WMS_Ref')?.trim();
               if (!wmsRef) {
                 wmsRef = 'CONSOMABLE';
               }
-              out.push([
+
+              const newRow = [
                 'BGBHTS3',                        // CSV.Code_Env
                 today,                            // CSV.Stock_date
                 'BGB3',                           // CSV.Code_Act
@@ -455,7 +470,26 @@
                 cleanValue(row[idx.Z], 'CSV.Etat_PH'),      // CSV.Etat_PH
                 cleanValue(row[idx.AA], 'CSV.Risque_P'),    // CSV.Risque_P
                 cleanValue(row[idx.AD], 'CSV.Designation_V') // CSV.Designation_V
-              ]);
+              ];
+
+              // Vérifier champs requis (y compris logique Allee/Cell : comme Allee vide, Cell doit être rempli)
+              let rowErrors = [];
+              for (let [field, col] of Object.entries(requiredIndices)) {
+                if (newRow[col] === '') {
+                  rowErrors.push(field);
+                }
+              }
+
+              if (rowErrors.length > 0) {
+                errorRows.push({ row: r + 1, type: 'empty_required', details: `Champs vides: ${rowErrors.join(', ')}` });
+              } else {
+                out.push(newRow);
+              }
+            }
+
+            if (errorRows.length > 0) {
+              handleErrors(errorRows);
+              throw new Error('Champs requis vides détectés.');
             }
 
             // Supprimer les dernières lignes vides si présentes
@@ -479,7 +513,7 @@
 
           }catch(err){
             console.error(err);
-            if (!err.message.includes('Colonnes irrégulières')) {
+            if (!err.message.includes('Colonnes irrégulières') && !err.message.includes('Champs requis vides')) {
               alert('Erreur: ' + err.message);
               statusEl.textContent = 'Erreur pendant la conversion.';
             }
@@ -489,6 +523,30 @@
         }, 650);
       };
       reader.readAsArrayBuffer(f);
+    }
+
+    // Gestion des erreurs (affichage message + bouton export erreurs)
+    function handleErrors(errorRows) {
+      statusEl.textContent = 'Erreur : Colonnes irrégulières ou champs requis vides détectés. Conversion bloquée.';
+      
+      // Créer bouton pour exporter les erreurs
+      let errBtn = document.createElement('button');
+      errBtn.id = 'errorBtn';
+      errBtn.textContent = 'Exporter les erreurs';
+      errBtn.classList.add('btn', 'btn-warning');
+      spinner.after(errBtn);
+
+      errBtn.addEventListener('click', () => {
+        let errOut = [['Ligne', 'Type', 'Détails']];
+        errorRows.forEach(er => errOut.push([er.row, er.type, er.details]));
+        let csv = toCSV(errOut, ';');
+        let blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'erreurs_fichier.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
     }
 
     // Fonction pour envoyer le CSV au serveur backend
