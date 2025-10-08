@@ -51,6 +51,8 @@
     .btn-green:hover{background:var(--success-dark); transform:translateY(-1px)}
     .btn-purple{background:#8b5cf6}
     .btn-purple:hover{background:#7c3aed; transform:translateY(-1px)}
+    .btn-warning{background:var(--warning)}
+    .btn-warning:hover{background:#d97706; transform:translateY(-1px)}
     .btn-ghost{
       background:#eef6ff; color:#0b5cab; box-shadow:none;
       border:1px solid #dbeafe;
@@ -301,10 +303,13 @@
       return rows.map(r => r.map(esc).join(delimiter)).join('\n');
     }
 
-    // Validation des valeurs pour éviter les rejets
+    // Validation des valeurs pour éviter les rejets et supprimer ; et ,
     function cleanValue(value, field) {
       if (value === null || value === undefined) return '';
-      const str = String(value).trim();
+      let str = String(value).trim();
+
+      // Supprimer ; et , dans tous les champs
+      str = str.replace(/[;,]/g, ' ');
 
       if (field === 'CSV.Designation_V') {
         // Nettoyer Désignation vulgarisée
@@ -349,6 +354,10 @@
       spinner.style.display = 'block';
       statusEl.textContent = 'Lecture du classeur…';
 
+      // Supprimer un bouton d'erreur précédent s'il existe
+      const existingErrBtn = $('#errorBtn');
+      if (existingErrBtn) existingErrBtn.remove();
+
       const reader = new FileReader();
       reader.onload = function(e){
         setTimeout(()=>{ // petit délai pour visualiser le spinner
@@ -363,6 +372,40 @@
             // Vérifier le nombre de colonnes (au moins 30 pour atteindre AD)
             if (table[0] && table[0].length < 30) {
               throw new Error('Le fichier Excel a moins de 30 colonnes. Vérifiez le format du fichier.');
+            }
+
+            // Détecter colonnes vides / irrégulières (lignes avec moins de colonnes que le max)
+            let maxCols = Math.max(...table.map(row => row.length || 0));
+            let errorRows = [];
+            for (let r = 0; r < table.length; r++) {
+              if (table[r].length < maxCols) {
+                errorRows.push({ row: r + 1, cells: table[r].length, expected: maxCols });
+              }
+            }
+
+            if (errorRows.length > 0) {
+              statusEl.textContent = 'Erreur : Colonnes irrégulières détectées (certaines lignes ont des colonnes manquantes). Conversion bloquée.';
+              
+              // Créer bouton pour exporter les erreurs
+              let errBtn = document.createElement('button');
+              errBtn.id = 'errorBtn';
+              errBtn.textContent = 'Exporter les erreurs';
+              errBtn.classList.add('btn', 'btn-warning');
+              spinner.after(errBtn);
+
+              errBtn.addEventListener('click', () => {
+                let errOut = [['Ligne', 'Colonnes présentes', 'Colonnes attendues']];
+                errorRows.forEach(er => errOut.push([er.row, er.cells, er.expected]));
+                let csv = toCSV(errOut, ';');
+                let blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+                let a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'erreurs_colonnes.csv';
+                a.click();
+                URL.revokeObjectURL(a.href);
+              });
+
+              throw new Error('Colonnes irrégulières dans le fichier.');
             }
 
             // Construction du résultat
@@ -436,8 +479,10 @@
 
           }catch(err){
             console.error(err);
-            alert('Erreur: ' + err.message);
-            statusEl.textContent = 'Erreur pendant la conversion.';
+            if (!err.message.includes('Colonnes irrégulières')) {
+              alert('Erreur: ' + err.message);
+              statusEl.textContent = 'Erreur pendant la conversion.';
+            }
           }finally{
             setTimeout(()=>{ spinner.style.display='none'; }, 500);
           }
