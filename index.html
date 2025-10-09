@@ -143,6 +143,7 @@
           Envoyer sur SFTP
         </button>
       </div>
+      <img src="logo.png" alt="BigBlue Logo" style="height: 40px; margin-left: auto;">
     </header>
 
     <!-- Zone de sélection / drag & drop -->
@@ -199,7 +200,7 @@
   </div>
 
   <footer>
-    Kuehne+Nagel — Tous droits réservés — Made by Mohamed Bouzekri
+    Kuehne+Nagel — Tous droits réservés — Made by <a href="mailto:mohamed.bouzekri@kuehne-nagel.com">Mohamed Bouzekri</a>
   </footer>
 
   <!-- Modal Aide -->
@@ -250,7 +251,7 @@
         <button class="btn btn-ghost" id="closeUpdate">Fermer ✕</button>
       </header>
       <ul class="steps">
-        <li><strong>Version actuelle (08/10/2025) :</strong> Ajout du bouton "Mises à jour" pour afficher les nouveautés. Conservation des virgules dans les phrases de danger (CSV.PH_DG).</li>
+        <li><strong>Version actuelle (09/10/2025) :</strong> Ajout du bouton " Conservation des virgules dans les phrases de danger (CSV.PH_DG) et Suppression des ; dans les Désignation .</li>
         <li><strong>Précédente mise à jour :</strong> Suppression automatique des ; et , (sauf dans PH_DG), détection de colonnes irrégulières avec blocage et export des erreurs.</li>
         <li><strong>Anciennes versions :</strong> Nettoyage des valeurs non conformes (Designation_V, Risque_P, PH_DG, ICPE), validation du nombre de colonnes, etc.</li>
       </ul>
@@ -358,7 +359,7 @@
 
       if (field === 'CSV.ICPE') {
         // ICPE : laisser vide si non valide
-        if (['MUJI', 'manque icpe'].includes(str) || str === '') {
+        if (['MUJI'].includes(str) || str === '') {
           return '';
         }
         return str;
@@ -396,8 +397,13 @@
               throw new Error('Le fichier Excel a moins de 30 colonnes. Vérifiez le format du fichier.');
             }
 
-            // Détecter colonnes vides / irrégulières (lignes avec moins de colonnes que le max)
+            // Normaliser les longueurs de lignes en paddant avec '' pour éviter détection fausse de colonnes irrégulières
             let maxCols = Math.max(...table.map(row => row.length || 0));
+            for (let row of table) {
+              while (row.length < maxCols) row.push('');
+            }
+
+            // Détecter colonnes vides / irrégulières (lignes avec moins de colonnes que le max) – maintenant paddé, donc devrait passer si trailing empties
             let errorRows = [];
             for (let r = 0; r < table.length; r++) {
               if (table[r].length < maxCols) {
