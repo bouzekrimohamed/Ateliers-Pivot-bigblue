@@ -9,7 +9,7 @@ from flask_cors import CORS
 CORS(app)
 
 
-# --- Configuration SFTP ---
+# --- Configuration SFTP pas le test pas le meme identifiant  ---
 SFTP_CONFIG = {
     "host": "mft-int.int.kn",
     "port": 22,
@@ -36,7 +36,7 @@ def upload():
             local_path = tmp.name
         print(f"📂 Fichier reçu : {filename} ({os.path.getsize(local_path)} octets)")
 
-        # Connexion SFTP
+        # Connexion SFTP 
         print("🔌 Connexion SFTP en cours...")
         transport = paramiko.Transport((SFTP_CONFIG["host"], SFTP_CONFIG["port"]))
         transport.connect(
