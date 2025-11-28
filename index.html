@@ -2,7 +2,6 @@
 <html lang="fr">
 <head>
    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/8242/8242984.png">
-
   <meta charset="UTF-8" />
   <title>Convertisseur Excel → CSV (BGB)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -12,9 +11,9 @@
       --card:#ffffff;
       --text:#1f2937;
       --muted:#6b7280;
-      --primary:#0ea5e9;        /* bleu clair */
+      --primary:#0ea5e9; /* bleu clair */
       --primary-dark:#0284c7;
-      --success:#22c55e;        /* vert */
+      --success:#22c55e; /* vert */
       --success-dark:#16a34a;
       --warning:#f59e0b;
       --ring:#bae6fd;
@@ -118,7 +117,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>Convertisseur Excel → CSV (règles BGB)</h1>
+      <h1>Convertisseur Excel → CSV (BGB)</h1>
       <div class="actions">
         <button class="btn btn-ghost" id="helpBtn" title="Aide / Mode d’emploi">
           <img class="icon" src="https://www.shutterstock.com/image-vector/support-icon-can-be-used-600nw-1887496465.jpg" alt="Aide"
@@ -145,14 +144,13 @@
       </div>
       <img src="logo.png" alt="BigBlue Logo" style="height: 40px; margin-left: auto;">
     </header>
-
     <!-- Zone de sélection / drag & drop -->
     <div id="uploader" class="uploader glow">
       <label for="inputFile" class="label">
-        📄 Choisir un fichier Excel
+        📄 Choisir des fichiers Excel (jusqu'à 2)
       </label>
-      <input id="inputFile" type="file" accept=".xlsx,.xls,.xlsm" />
-      <div class="hint">Glisse-dépose ton fichier ici ou clique pour le sélectionner (la 1ère feuille sera lue).</div>
+      <input id="inputFile" type="file" accept=".xlsx,.xls,.xlsm" multiple />
+      <div class="hint">Glisse-dépose tes fichiers ici ou clique pour les sélectionner (2 max, 1ères feuilles lues, fusionnés en supprimant l'entête du 2ème).</div>
       <div class="badges">
         <span class="badge">Colonnes A,B,C ajoutées (valeurs fixes)</span>
         <span class="badge">Colonnes réordonnées/renommées</span>
@@ -160,18 +158,15 @@
       </div>
       <div id="fileName" class="file-name" aria-live="polite"></div>
     </div>
-
     <div id="spinner" aria-live="polite">
       <div class="spinner"></div>
       <div id="status">Conversion en cours…</div>
     </div>
-
     <div class="divider"></div>
-
     <section>
       <h3 style="margin:6px 0 8px">Ce que fait l’outil (résumé)</h3>
       <ol class="steps">
-        <li>Lit la <strong>1ère feuille</strong> de ton fichier Excel (dans ton navigateur, rien n’est envoyé).</li>
+        <li>Lit la <strong>1ère feuille</strong> de tes fichiers Excel (dans ton navigateur, rien n’est envoyé). Si deux fichiers, fusionne en supprimant l'entête du second.</li>
         <li>Ajoute 3 colonnes en tête :
           <span class="kbd">A = code environnement = "BGBHTS3"</span>,
           <span class="kbd">B = date du stock = date du jour</span>,
@@ -194,15 +189,13 @@
             <code>CSV.Designation_V ← AD</code>.
           </div>
         </li>
-        <li>Exporte le résultat en <strong>CSV</strong> avec séparateur <span class="kbd">;</span> ou <span class="kbd">,</span> au choix.</li>
+        <li>Exporte le résultat en <strong>CSV</strong> avec séparateur <span class="kbd">;</span> ou <span class="kbd>,</span> au choix.</li>
       </ol>
     </section>
   </div>
-
   <footer>
     Kuehne+Nagel — Tous droits réservés — Made by <a href="mailto:mohamed.bouzekri@kuehne-nagel.com">Mohamed Bouzekri</a>
   </footer>
-
   <!-- Modal Aide -->
   <div id="helpModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
     <div class="modal-card">
@@ -211,8 +204,9 @@
         <button class="btn btn-ghost" id="closeHelp">Fermer ✕</button>
       </header>
       <ol class="steps">
-        <li>Clique sur <strong>Choisir un fichier Excel</strong> ou dépose-le dans la zone grisée.</li>
-        <li>Une fois chargé, les boutons <strong>Exporter CSV</strong> s’activent.</li>
+        <li>Clique sur <strong>Choisir des fichiers Excel</strong> ou dépose-les dans la zone grisée (jusqu'à 2).</li>
+        <li>Une fois chargés, les boutons <strong>Exporter CSV</strong> s’activent.</li>
+        <li>Si deux fichiers, ils sont fusionnés (entête du second supprimé).</li>
         <li>L’outil crée automatiquement en tête :
           <ul>
             <li><strong>A</strong> : <em>CSV.Code_Env</em> = <span class="kbd">BGBHTS3</span></li>
@@ -237,12 +231,11 @@
             <li><strong>AD</strong> → CSV.Designation_V</li>
           </ul>
         </li>
-        <li>Choisis le séparateur souhaité : <span class="kbd">;</span> (France/Excel) ou <span class="kbd">,</span> (interop). Le <strong>CSV</strong> se télécharge.</li>
+        <li>Choisis le séparateur souhaité : <span class="kbd">;</span> (France/Excel) ou <span class="kbd>,</span> (interop). Le <strong>CSV</strong> se télécharge.</li>
         <li>Tout se fait <strong>localement</strong> dans ton navigateur — aucune donnée envoyée.</li>
       </ol>
     </div>
   </div>
-
   <!-- Modal Mises à jour -->
   <div id="updateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="updateTitle">
     <div class="modal-card">
@@ -257,14 +250,12 @@
       </ul>
     </div>
   </div>
-
   <!-- Lib XLSX -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
     // Utilitaires
     const $ = sel => document.querySelector(sel);
     const $$ = sel => document.querySelectorAll(sel);
-
     const uploader = $('#uploader');
     const inputFile = $('#inputFile');
     const fileName = $('#fileName');
@@ -273,25 +264,20 @@
     const btnCsvSemi = $('#btnCsvSemi');
     const btnCsvComma = $('#btnCsvComma');
     const btnSftp = $('#btnSftp');
-
     const helpBtn = $('#helpBtn');
     const helpModal = $('#helpModal');
     const closeHelp = $('#closeHelp');
-
     const updateBtn = $('#updateBtn');
     const updateModal = $('#updateModal');
     const closeUpdate = $('#closeUpdate');
-
     // Ouverture/fermeture Aide
     helpBtn.addEventListener('click', ()=> helpModal.classList.add('open'));
     closeHelp.addEventListener('click', ()=> helpModal.classList.remove('open'));
     helpModal.addEventListener('click', (e)=>{ if(e.target===helpModal) helpModal.classList.remove('open'); });
-
     // Ouverture/fermeture Mises à jour
     updateBtn.addEventListener('click', ()=> updateModal.classList.add('open'));
     closeUpdate.addEventListener('click', ()=> updateModal.classList.remove('open'));
     updateModal.addEventListener('click', (e)=>{ if(e.target===updateModal) updateModal.classList.remove('open'); });
-
     // Drag & drop animations
     ;['dragenter','dragover'].forEach(evt => {
       uploader.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); uploader.classList.add('drag'); });
@@ -300,27 +286,34 @@
       uploader.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); uploader.classList.remove('drag'); });
     });
     uploader.addEventListener('drop', (e)=>{
-      const f = e.dataTransfer.files?.[0];
-      if(f){ inputFile.files = e.dataTransfer.files; onFileChosen(); }
+      const files = e.dataTransfer.files;
+      if(files && files.length > 0 && files.length <= 2){ 
+        inputFile.files = files; 
+        onFileChosen(); 
+      } else if (files.length > 2) {
+        alert('Maximum 2 fichiers autorisés.');
+      }
     });
-
     // Choix de fichier
     inputFile.addEventListener('change', onFileChosen);
     function onFileChosen(){
       if(!inputFile.files.length){ return; }
-      const f = inputFile.files[0];
-      fileName.textContent = `Fichier sélectionné : ${f.name}`;
+      if(inputFile.files.length > 2){
+        alert('Maximum 2 fichiers autorisés.');
+        inputFile.value = '';
+        return;
+      }
+      const fileNames = Array.from(inputFile.files).map(f => f.name).join(', ');
+      fileName.textContent = `Fichier(s) sélectionné(s) : ${fileNames}`;
       btnCsvSemi.disabled = false;
       btnCsvComma.disabled = false;
       btnSftp.disabled = false;
       uploader.classList.remove('glow');
     }
-
     // Boutons export
     btnCsvSemi.addEventListener('click', ()=> exportCSV(';', false));
     btnCsvComma.addEventListener('click', ()=> exportCSV(',', false));
     btnSftp.addEventListener('click', ()=> exportCSV(';', true)); // Envoi SFTP avec ;
-
     // Convertit un tableau JS -> CSV (échappement correct)
     function toCSV(rows, delimiter){
       const esc = v => {
@@ -332,15 +325,12 @@
       };
       return rows.map(r => r.map(esc).join(delimiter)).join('\n');
     }
-
     // Validation des valeurs pour éviter les rejets et supprimer ; (garder , pour éviter décalages)
     function cleanValue(value, field) {
       if (value === null || value === undefined) return '';
       let str = String(value).trim();
-
       // Supprimer ; dans tous les champs (remplacer par espace)
       str = str.replace(/;/g, ' ');
-
       if (field === 'CSV.Designation_V') {
         // Nettoyer Désignation vulgarisée
         if (['LC', '0', 'Hygiene - Beauté', 'SLC'].includes(str) || str === '') {
@@ -348,7 +338,6 @@
         }
         return str.substring(0, 45); // Limite à 45 caractères
       }
-
       if (field === 'CSV.Risque_P') {
         // Nettoyer Risque particulier
         if (['0', 'Solide', 'Liquide'].includes(str) || str === '') {
@@ -356,7 +345,6 @@
         }
         return str;
       }
-
       if (field === 'CSV.ICPE') {
         // ICPE : laisser vide si non valide
         if (['MUJI'].includes(str) || str === '') {
@@ -364,184 +352,172 @@
         }
         return str;
       }
-
       // Pas de suppression de , (gardées partout pour phrases de danger etc.)
       return str;
     }
-
     // Lecture + transformation + export ou envoi
-    function exportCSV(delimiter, sendToSftp = false){
-      const f = inputFile.files[0];
-      if(!f){ alert("Sélectionne d'abord un fichier Excel."); return; }
-
+    async function exportCSV(delimiter, sendToSftp = false){
+      const files = inputFile.files;
+      if(!files || files.length === 0){ alert("Sélectionne au moins un fichier Excel."); return; }
       spinner.style.display = 'block';
-      statusEl.textContent = 'Lecture du classeur…';
-
+      statusEl.textContent = 'Lecture des classeurs…';
       // Supprimer un bouton d'erreur précédent s'il existe
       const existingErrBtn = $('#errorBtn');
       if (existingErrBtn) existingErrBtn.remove();
-
-      const reader = new FileReader();
-      reader.onload = function(e){
-        setTimeout(()=>{ // petit délai pour visualiser le spinner
-          try{
-            const data = new Uint8Array(e.target.result);
-            const wb = XLSX.read(data, { type:'array' });
-
-            const ws = wb.Sheets[wb.SheetNames[0]];  // 1ère feuille
-            let table = XLSX.utils.sheet_to_json(ws, { header:1 }); // tableau 2D brut
-            if(!table || table.length === 0){ throw new Error('Feuille vide ou illisible.'); }
-
-            // Vérifier le nombre de colonnes (au moins 30 pour atteindre AD)
-            if (table[0] && table[0].length < 30) {
-              throw new Error('Le fichier Excel a moins de 30 colonnes. Vérifiez le format du fichier.');
-            }
-
-            // Normaliser les longueurs de lignes en paddant avec '' pour éviter détection fausse de colonnes irrégulières
-            let maxCols = Math.max(...table.map(row => row.length || 0));
-            for (let row of table) {
-              while (row.length < maxCols) row.push('');
-            }
-
-            // Détecter colonnes vides / irrégulières (lignes avec moins de colonnes que le max) – maintenant paddé, donc devrait passer si trailing empties
-            let errorRows = [];
-            for (let r = 0; r < table.length; r++) {
-              if (table[r].length < maxCols) {
-                errorRows.push({ row: r + 1, type: 'irregular_columns', details: `Colonnes présentes: ${table[r].length}, attendues: ${maxCols}` });
+      try {
+        const tables = await Promise.all(Array.from(files).map(async (f) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const data = new Uint8Array(e.target.result);
+                const wb = XLSX.read(data, { type:'array' });
+                const ws = wb.Sheets[wb.SheetNames[0]]; // 1ère feuille
+                const table = XLSX.utils.sheet_to_json(ws, { header:1 }); // tableau 2D brut
+                if(!table || table.length === 0){ throw new Error('Feuille vide ou illisible dans ' + f.name); }
+                resolve(table);
+              } catch (err) {
+                reject(err);
               }
-            }
-
-            if (errorRows.length > 0) {
-              handleErrors(errorRows);
-              throw new Error('Colonnes irrégulières dans le fichier.');
-            }
-
-            // Construction du résultat
-            const today = new Date().toISOString().slice(0,10).replace(/-/g,''); // AAAAMMJJ
-            const out = [];
-
-            // Entêtes finales
-            out.push([
-              'CSV.Code_Env','CSV.Stock_date','CSV.Code_Act',
-              'CSV.WMS_Ref','CSV.Designation','CSV.Supplier',
-              'CSV.ICPE','CSV.Allee','CSV.Cell','CSV.QTY',
-              'CSV.QTY_Poids','CSV.QTY_Vol','CSV.PH_DG',
-              'CSV.Etat_PH','CSV.Risque_P','CSV.Designation_V'
-            ]);
-
-            statusEl.textContent = 'Transformation des lignes…';
-
-            // Indices colonnes source (A=0)
-            const idx = {
-              B:1, C:2, H:7, T:19, V:21,
-              I:8, Q:16, P:15, W:22,
-              Z:25, AA:26, AD:29
             };
+            reader.readAsArrayBuffer(f);
+          });
+        }));
 
-            // Champs requis (vide non autorisé)
-            const requiredIndices = {
-              'CSV.WMS_Ref': 3,
-              'CSV.Designation': 4,
-              'CSV.ICPE': 6,
-              'CSV.Cell': 8,
-              'CSV.QTY': 9,
-              'CSV.QTY_Poids': 10,
-              'CSV.QTY_Vol': 11
-            };
+        // Fusionner les tables
+        let combined = tables[0];
+        if (tables.length === 2) {
+          combined = combined.concat(tables[1].slice(1)); // Supprimer l'entête du second fichier
+        }
 
-            for(let r=1; r<table.length; r++){
-              const row = table[r] || [];
-              const designation = cleanValue(row[idx.C], 'CSV.Designation')?.substring(0,45).trim();
-              if (!designation) continue; // Skip lignes sans désignation
-
-              let wmsRef = cleanValue(row[idx.B], 'CSV.WMS_Ref')?.trim();
-              if (!wmsRef) {
-                wmsRef = 'CONSOMABLE';
-              }
-
-              const newRow = [
-                'BGBHTS3',                        // CSV.Code_Env
-                today,                            // CSV.Stock_date
-                'BGB3',                           // CSV.Code_Act
-                wmsRef,                           // CSV.WMS_Ref
-                designation,                      // CSV.Designation (tronquée à 45 chars, trimmed)
-                cleanValue(row[idx.H], 'CSV.Supplier'),     // CSV.Supplier
-                cleanValue(row[idx.T], 'CSV.ICPE'),         // CSV.ICPE
-                '',                               // CSV.Allee (vide)
-                cleanValue(row[idx.V], 'CSV.Cell'),         // CSV.Cell
-                cleanValue(row[idx.I], 'CSV.QTY'),          // CSV.QTY
-                cleanValue(row[idx.Q], 'CSV.QTY_Poids'),    // CSV.QTY_Poids
-                cleanValue(row[idx.P], 'CSV.QTY_Vol'),      // CSV.QTY_Vol
-                cleanValue(row[idx.W], 'CSV.PH_DG'),        // CSV.PH_DG
-                cleanValue(row[idx.Z], 'CSV.Etat_PH'),      // CSV.Etat_PH
-                cleanValue(row[idx.AA], 'CSV.Risque_P'),    // CSV.Risque_P
-                cleanValue(row[idx.AD], 'CSV.Designation_V') // CSV.Designation_V
-              ];
-
-              // Vérifier champs requis (y compris logique Allee/Cell : comme Allee vide, Cell doit être rempli)
-              let rowErrors = [];
-              for (let [field, col] of Object.entries(requiredIndices)) {
-                if (newRow[col] === '') {
-                  rowErrors.push(field);
-                }
-              }
-
-              if (rowErrors.length > 0) {
-                errorRows.push({ row: r + 1, type: 'empty_required', details: `Champs vides: ${rowErrors.join(', ')}` });
-              } else {
-                out.push(newRow);
-              }
-            }
-
-            if (errorRows.length > 0) {
-              handleErrors(errorRows);
-              throw new Error('Champs requis vides détectés.');
-            }
-
-            // Supprimer les dernières lignes vides si présentes
-            while (out.length > 1 && out[out.length - 1].every(v => v === '')) {
-              out.pop();
-            }
-
-            statusEl.textContent = `Génération du CSV… (${out.length-1} lignes)`;
-            const csv = toCSV(out, delimiter);
-            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `ESRST_BGBHTS3_${today}001.ESR`;
-            if (sendToSftp) {
-              uploadToServer(csv, a.download);
-            } else {
-              a.click();
-              URL.revokeObjectURL(a.href);
-              statusEl.textContent = '✅ Export terminé.';
-            }
-
-          }catch(err){
-            console.error(err);
-            if (!err.message.includes('Colonnes irrégulières') && !err.message.includes('Champs requis vides')) {
-              alert('Erreur: ' + err.message);
-              statusEl.textContent = 'Erreur pendant la conversion.';
-            }
-          }finally{
-            setTimeout(()=>{ spinner.style.display='none'; }, 500);
+        // Vérifier le nombre de colonnes (au moins 30 pour atteindre AD)
+        if (combined[0] && combined[0].length < 30) {
+          throw new Error('Un fichier Excel a moins de 30 colonnes. Vérifiez le format des fichiers.');
+        }
+        // Normaliser les longueurs de lignes en paddant avec '' pour éviter détection fausse de colonnes irrégulières
+        let maxCols = Math.max(...combined.map(row => row.length || 0));
+        for (let row of combined) {
+          while (row.length < maxCols) row.push('');
+        }
+        // Détecter colonnes vides / irrégulières (lignes avec moins de colonnes que le max) – maintenant paddé, donc devrait passer si trailing empties
+        let errorRows = [];
+        for (let r = 0; r < combined.length; r++) {
+          if (combined[r].length < maxCols) {
+            errorRows.push({ row: r + 1, type: 'irregular_columns', details: `Colonnes présentes: ${combined[r].length}, attendues: ${maxCols}` });
           }
-        }, 650);
-      };
-      reader.readAsArrayBuffer(f);
+        }
+        if (errorRows.length > 0) {
+          handleErrors(errorRows);
+          throw new Error('Colonnes irrégulières dans les fichiers.');
+        }
+        // Construction du résultat
+        const today = new Date().toISOString().slice(0,10).replace(/-/g,''); // AAAAMMJJ
+        const out = [];
+        // Entêtes finales
+        out.push([
+          'CSV.Code_Env','CSV.Stock_date','CSV.Code_Act',
+          'CSV.WMS_Ref','CSV.Designation','CSV.Supplier',
+          'CSV.ICPE','CSV.Allee','CSV.Cell','CSV.QTY',
+          'CSV.QTY_Poids','CSV.QTY_Vol','CSV.PH_DG',
+          'CSV.Etat_PH','CSV.Risque_P','CSV.Designation_V'
+        ]);
+        statusEl.textContent = 'Transformation des lignes…';
+        // Indices colonnes source (A=0)
+        const idx = {
+          B:1, C:2, H:7, T:19, V:21,
+          I:8, Q:16, P:15, W:22,
+          Z:25, AA:26, AD:29
+        };
+        // Champs requis (vide non autorisé)
+        const requiredIndices = {
+          'CSV.WMS_Ref': 3,
+          'CSV.Designation': 4,
+          'CSV.ICPE': 6,
+          'CSV.Cell': 8,
+          'CSV.QTY': 9,
+          'CSV.QTY_Poids': 10,
+          'CSV.QTY_Vol': 11
+        };
+        for(let r=1; r<combined.length; r++){
+          const row = combined[r] || [];
+          const designation = cleanValue(row[idx.C], 'CSV.Designation')?.substring(0,45).trim();
+          if (!designation) continue; // Skip lignes sans désignation
+          let wmsRef = cleanValue(row[idx.B], 'CSV.WMS_Ref')?.trim();
+          if (!wmsRef) {
+            wmsRef = 'CONSOMABLE';
+          }
+          const newRow = [
+            'BGBHTS3', // CSV.Code_Env
+            today, // CSV.Stock_date
+            'BGB3', // CSV.Code_Act
+            wmsRef, // CSV.WMS_Ref
+            designation, // CSV.Designation (tronquée à 45 chars, trimmed)
+            cleanValue(row[idx.H], 'CSV.Supplier'), // CSV.Supplier
+            cleanValue(row[idx.T], 'CSV.ICPE'), // CSV.ICPE
+            '', // CSV.Allee (vide)
+            cleanValue(row[idx.V], 'CSV.Cell'), // CSV.Cell
+            cleanValue(row[idx.I], 'CSV.QTY'), // CSV.QTY
+            cleanValue(row[idx.Q], 'CSV.QTY_Poids'), // CSV.QTY_Poids
+            cleanValue(row[idx.P], 'CSV.QTY_Vol'), // CSV.QTY_Vol
+            cleanValue(row[idx.W], 'CSV.PH_DG'), // CSV.PH_DG
+            cleanValue(row[idx.Z], 'CSV.Etat_PH'), // CSV.Etat_PH
+            cleanValue(row[idx.AA], 'CSV.Risque_P'), // CSV.Risque_P
+            cleanValue(row[idx.AD], 'CSV.Designation_V') // CSV.Designation_V
+          ];
+          // Vérifier champs requis (y compris logique Allee/Cell : comme Allee vide, Cell doit être rempli)
+          let rowErrors = [];
+          for (let [field, col] of Object.entries(requiredIndices)) {
+            if (newRow[col] === '') {
+              rowErrors.push(field);
+            }
+          }
+          if (rowErrors.length > 0) {
+            errorRows.push({ row: r + 1, type: 'empty_required', details: `Champs vides: ${rowErrors.join(', ')}` });
+          } else {
+            out.push(newRow);
+          }
+        }
+        if (errorRows.length > 0) {
+          handleErrors(errorRows);
+          throw new Error('Champs requis vides détectés.');
+        }
+        // Supprimer les dernières lignes vides si présentes
+        while (out.length > 1 && out[out.length - 1].every(v => v === '')) {
+          out.pop();
+        }
+        statusEl.textContent = `Génération du CSV… (${out.length-1} lignes)`;
+        const csv = toCSV(out, delimiter);
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `ESRST_BGBHTS3_${today}001.ESR`;
+        if (sendToSftp) {
+          uploadToServer(csv, a.download);
+        } else {
+          a.click();
+          URL.revokeObjectURL(a.href);
+          statusEl.textContent = '✅ Export terminé.';
+        }
+      } catch(err){
+        console.error(err);
+        if (!err.message.includes('Colonnes irrégulières') && !err.message.includes('Champs requis vides')) {
+          alert('Erreur: ' + err.message);
+          statusEl.textContent = 'Erreur pendant la conversion.';
+        }
+      } finally{
+        setTimeout(()=>{ spinner.style.display='none'; }, 500);
+      }
     }
-
     // Gestion des erreurs (affichage message + bouton export erreurs)
     function handleErrors(errorRows) {
       statusEl.textContent = 'Erreur : Colonnes irrégulières ou champs requis vides détectés. Conversion bloquée.';
-      
+     
       // Créer bouton pour exporter les erreurs
       let errBtn = document.createElement('button');
       errBtn.id = 'errorBtn';
       errBtn.textContent = 'Exporter les erreurs';
       errBtn.classList.add('btn', 'btn-warning');
       spinner.after(errBtn);
-
       errBtn.addEventListener('click', () => {
         let errOut = [['Ligne', 'Type', 'Détails']];
         errorRows.forEach(er => errOut.push([er.row, er.type, er.details]));
@@ -554,12 +530,10 @@
         URL.revokeObjectURL(a.href);
       });
     }
-
     // Fonction pour envoyer le CSV au serveur backend
     async function uploadToServer(csv, filename) {
       const formData = new FormData();
       formData.append("file", new Blob([csv], {type:"text/csv"}), filename);
-
       try {
         let res = await fetch("http://localhost:5000/upload", {
           method: "POST",
