@@ -270,6 +270,7 @@
     const updateBtn = $('#updateBtn');
     const updateModal = $('#updateModal');
     const closeUpdate = $('#closeUpdate');
+    let selectedFiles = [];
     // Ouverture/fermeture Aide
     helpBtn.addEventListener('click', ()=> helpModal.classList.add('open'));
     closeHelp.addEventListener('click', ()=> helpModal.classList.remove('open'));
@@ -287,23 +288,34 @@
     });
     uploader.addEventListener('drop', (e)=>{
       const files = e.dataTransfer.files;
-      if(files && files.length > 0 && files.length <= 2){ 
-        inputFile.files = files; 
-        onFileChosen(); 
-      } else if (files.length > 2) {
-        alert('Maximum 2 fichiers autorisés.');
-      }
+      handleFiles(files);
     });
     // Choix de fichier
-    inputFile.addEventListener('change', onFileChosen);
-    function onFileChosen(){
-      if(!inputFile.files.length){ return; }
-      if(inputFile.files.length > 2){
+    inputFile.addEventListener('change', ()=>{
+      const files = inputFile.files;
+      handleFiles(files);
+      inputFile.value = ''; // Clear the input after handling
+    });
+    function isValidFile(file) {
+      return /\.(xls|xlsx|xlsm)$/i.test(file.name);
+    }
+    function handleFiles(files) {
+      if (!files || files.length === 0) return;
+      const fileList = Array.from(files);
+      if (fileList.length > 2) {
         alert('Maximum 2 fichiers autorisés.');
-        inputFile.value = '';
         return;
       }
-      const fileNames = Array.from(inputFile.files).map(f => f.name).join(', ');
+      if (!fileList.every(isValidFile)) {
+        alert('Fichiers invalides : seuls les fichiers Excel (.xls, .xlsx, .xlsm) sont acceptés.');
+        return;
+      }
+      selectedFiles = fileList;
+      updateDisplay();
+    }
+    function updateDisplay() {
+      if (selectedFiles.length === 0) return;
+      const fileNames = selectedFiles.map(f => f.name).join(', ');
       fileName.textContent = `Fichier(s) sélectionné(s) : ${fileNames}`;
       btnCsvSemi.disabled = false;
       btnCsvComma.disabled = false;
@@ -357,15 +369,14 @@
     }
     // Lecture + transformation + export ou envoi
     async function exportCSV(delimiter, sendToSftp = false){
-      const files = inputFile.files;
-      if(!files || files.length === 0){ alert("Sélectionne au moins un fichier Excel."); return; }
+      if(selectedFiles.length === 0){ alert("Sélectionne au moins un fichier Excel."); return; }
       spinner.style.display = 'block';
       statusEl.textContent = 'Lecture des classeurs…';
       // Supprimer un bouton d'erreur précédent s'il existe
       const existingErrBtn = $('#errorBtn');
       if (existingErrBtn) existingErrBtn.remove();
       try {
-        const tables = await Promise.all(Array.from(files).map(async (f) => {
+        const tables = await Promise.all(selectedFiles.map(async (f) => {
           return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
