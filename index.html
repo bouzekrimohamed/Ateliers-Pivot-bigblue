@@ -218,9 +218,9 @@
         <button class="btn btn-ghost" id="closeUpdate">Fermer ✕</button>
       </header>
       <ul class="steps">
-        <li><strong>Version actuelle (23/12/2025) :</strong> Ajout d'un traitement pour supprimer toutes les lignes où la colonne H = 'SNDS'. Précédemment : Dans la dernière étape, le fichier final et le CSV ne contiennent que la feuille 'extraction big blue'.</li>
-        <li><strong>Précédente mise à jour :</strong> Mise à jour de la bibliothèque SheetJS vers la version 0.20.3 pour corriger l'erreur 'invalid array length' avec les fichiers larges. Télécharge la dernière version de xlsx.full.min.js depuis https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js et remplace le fichier dans ton répertoire. Ajout de compression:true dans XLSX.write pour réduire la taille des fichiers. Limitation des colonnes lues à O pour la fusion et AD pour le recalcul en utilisant l'option range dans sheet_to_json pour éviter les erreurs de longueur d'array invalide.</li>
-        <li><strong>Anciennes versions :</strong> Suppression automatique des ; et , (sauf dans PH_DG), détection de colonnes irrégulières avec blocage et export des erreurs.</li>
+        <li><strong>Version actuelle (23/12/2025) :</strong> Correction du problème d'ouverture du fichier final en créant un nouveau workbook avec uniquement la feuille 'extraction big blue' pour éviter les corruptions. Précédemment : Ajout d'un traitement pour supprimer toutes les lignes où la colonne H = 'SNDS'.</li>
+        <li><strong>Précédente mise à jour :</strong> Dans la dernière étape, le fichier final et le CSV ne contiennent que la feuille 'extraction big blue'.</li>
+        <li><strong>Anciennes versions :</strong> Mise à jour de la bibliothèque SheetJS vers la version 0.20.3 pour corriger l'erreur 'invalid array length' avec les fichiers larges. Télécharge la dernière version de xlsx.full.min.js depuis https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js et remplace le fichier dans ton répertoire. Ajout de compression:true dans XLSX.write pour réduire la taille des fichiers. Limitation des colonnes lues à O pour la fusion et AD pour le recalcul en utilisant l'option range dans sheet_to_json pour éviter les erreurs de longueur d'array invalide.</li>
       </ul>
     </div>
   </div>
@@ -526,22 +526,16 @@
         // Appliquer les traitements
         statusEl.textContent = 'Application des traitements…';
         updatedTable = applyPostFormulaTreatments(updatedTable);
-        // Mettre à jour le sheet
-        wb.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(updatedTable);
-        // Supprimer les autres feuilles
-        wb.SheetNames.forEach(name => {
-          if (name !== sheetName) {
-            delete wb.Sheets[name];
-          }
-        });
-        wb.SheetNames = [sheetName];
+        // Créer un nouveau workbook avec seulement cette feuille
+        let newWb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(newWb, XLSX.utils.aoa_to_sheet(updatedTable), sheetName);
         // Vérifier erreurs
         statusEl.textContent = 'Vérification des erreurs…';
         let errorRows = checkErrors(updatedTable);
         if (errorRows.length > 0) {
           statusEl.textContent = 'Erreur : ICPE N/A avec B non vide détecté. Téléchargement pour correction manuelle.';
           // Télécharger pour correction
-          const outData = XLSX.write(wb, { bookType: 'xlsm', type: 'array', compression: true });
+          const outData = XLSX.write(newWb, { bookType: 'xlsm', type: 'array', compression: true });
           const blob = new Blob([outData], { type: 'application/vnd.ms-excel.sheet.macroEnabled.12' });
           const a = document.createElement('a');
           const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -550,10 +544,10 @@
           a.click();
           URL.revokeObjectURL(a.href);
         } else {
-          finalWb = wb;
+          finalWb = newWb;
           statusEl.textContent = '✅ Tout est OK. Téléchargement du fichier final pour vérification.';
           // Télécharger le final pour vue
-          const outData = XLSX.write(wb, { bookType: 'xlsm', type: 'array', compression: true });
+          const outData = XLSX.write(newWb, { bookType: 'xlsm', type: 'array', compression: true });
           const blob = new Blob([outData], { type: 'application/vnd.ms-excel.sheet.macroEnabled.12' });
           const a = document.createElement('a');
           const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
